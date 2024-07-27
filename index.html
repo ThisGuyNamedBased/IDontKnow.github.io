@@ -1,55 +1,100 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Roblox Script Executor</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-    }
-    #editor {
-      height: 400px;
-      width: 100%;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lua Executor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.31.1/min/vs/loader.js"></script>
+    <style>
+        #editor { height: 400px; width: 600px; border-radius: 8px; margin-bottom: 10px; }
+        #buttons { margin-top: 10px; }
+        .button { padding: 10px; border-radius: 5px; cursor: pointer; margin-right: 5px; }
+        #executeBtn { background-color: #4CAF50; color: white; }
+        #clearBtn { background-color: #f44336; color: white; }
+        #saveBtn { background-color: #008CBA; color: white; }
+        #scriptList { margin-top: 20px; }
+        #scriptList button { display: block; margin: 5px 0; }
+    </style>
 </head>
 <body>
-  <h1>Roblox Script Executor</h1>
-  <div id="editor">-- Write your Roblox server script here</div>
-  <button onclick="executeScript()">Execute Script</button>
-  <button onclick="saveScript()">Save Script</button>
-  <button onclick="loadScript()">Load Script</button>
+    <div id="editor"></div>
+    <div id="buttons">
+        <button id="executeBtn" class="button">Execute</button>
+        <button id="clearBtn" class="button">Clear</button>
+        <button id="saveBtn" class="button">Save</button>
+    </div>
+    <div id="scriptList"></div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
-  <script>
-    const editor = ace.edit("editor");
-    editor.setTheme("ace/theme/monokai");
-    editor.session.setMode("ace/mode/lua");
+    <script>
+        let serverUrl = 'https://notch-wobbly-coffee.glitch.me';
 
-    function executeScript() {
-      const script = editor.getValue();
-      fetch('/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ script })
-      });
-    }
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.31.1/min/vs' }});
+        require(['vs/editor/editor.main'], function() {
+            var editor = monaco.editor.create(document.getElementById('editor'), {
+                value: '',
+                language: 'lua',
+                theme: 'vs-dark'
+            });
 
-    function saveScript() {
-      const script = editor.getValue();
-      fetch('/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ script })
-      });
-    }
+            function updateScriptList() {
+                var scriptList = document.getElementById('scriptList');
+                scriptList.innerHTML = '';
+                var scripts = JSON.parse(localStorage.getItem('scripts') || '[]');
+                scripts.forEach(script => {
+                    var btn = document.createElement('button');
+                    btn.textContent = script.name;
+                    btn.onclick = () => editor.setValue(script.code);
+                    scriptList.appendChild(btn);
+                });
+            }
 
-    function loadScript() {
-      fetch('/load')
-        .then(response => response.json())
-        .then(data => editor.setValue(data.script));
-    }
-  </script>
+            document.getElementById('executeBtn').addEventListener('click', function() {
+                var luaCode = editor.getValue();
+                console.log('Sending Lua Code:', luaCode);
+
+                fetch(`${serverUrl}/api/execute`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ code: luaCode })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => alert('Code sent successfully!'))
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to send code. Check console for details.');
+                });
+            });
+
+            document.getElementById('clearBtn').addEventListener('click', function() {
+                editor.setValue('');
+            });
+
+            document.getElementById('saveBtn').addEventListener('click', function() {
+                var luaCode = editor.getValue();
+                var scriptName = prompt("Enter script name:");
+                if (scriptName) {
+                    var scripts = JSON.parse(localStorage.getItem('scripts') || '[]');
+                    if (scripts.some(script => script.name === scriptName)) {
+                        alert('Script name already exists.');
+                    } else {
+                        scripts.push({ name: scriptName, code: luaCode });
+                        localStorage.setItem('scripts', JSON.stringify(scripts));
+                        updateScriptList();
+                        alert('Script saved!');
+                    }
+                }
+            });
+
+            // Initialize script list
+            updateScriptList();
+        });
+    </script>
 </body>
 </html>
