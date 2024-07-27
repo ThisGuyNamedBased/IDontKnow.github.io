@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roblox Script Executor</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+    #editor {
+      height: 400px;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <h1>Roblox Script Executor</h1>
+  <div id="editor">-- Write your Roblox server script here</div>
+  <button onclick="executeScript()">Execute Script</button>
+  <button onclick="saveScript()">Save Script</button>
+  <button onclick="loadScript()">Load Script</button>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
+  <script>
+    const editor = ace.edit("editor");
+    editor.setTheme("ace/theme/monokai");
+    editor.session.setMode("ace/mode/lua");
+
+    function executeScript() {
+      const script = editor.getValue();
+      fetch('/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ script })
+      });
+    }
+
+    function saveScript() {
+      const script = editor.getValue();
+      fetch('/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ script })
+      });
+    }
+
+    function loadScript() {
+      fetch('/load')
+        .then(response => response.json())
+        .then(data => editor.setValue(data.script));
+    }
+  </script>
+</body>
+</html>
